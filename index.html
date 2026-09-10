@@ -406,6 +406,7 @@ function unlock(){
     setTimeout(()=>{
       login.classList.add("hidden");
       desktop.classList.remove("hidden");
+      desktop.classList.add("open");
       requestFull();
       setTimeout(()=>opening.classList.add("fade"),120);
       setTimeout(()=>opening.classList.add("hidden"),1450);
