@@ -409,6 +409,26 @@ box-shadow:inset 0 0 90px rgba(0,0,0,.38);border-radius:18px}
 .ottoWarningBits{animation:ottoBitGlitch .16s steps(1,end) infinite!important;}
 .ottoProgressBar{animation:ottoLoading 5.15s linear forwards!important;}
 
+
+/* Otto Brooks: Windows-style error/warning popup swarm */
+.ottoPopupLayer{position:absolute;inset:0;z-index:120;pointer-events:none;overflow:hidden;}
+.ottoPopup{position:absolute;min-width:220px;max-width:310px;background:#c0c0c0;color:#111;border:2px solid #fff;border-right-color:#404040;border-bottom-color:#404040;box-shadow:5px 5px 0 rgba(0,0,0,.65);font-family:"MS Sans Serif",Tahoma,Arial,sans-serif;font-size:12px;pointer-events:none;opacity:0;transform-origin:center;animation:ottoPopupLife var(--pop-life,1.1s) steps(1,end) forwards,ottoPopupJitter .075s steps(2,end) infinite;filter:contrast(1.2);}
+.ottoPopup.error{--pop-life:1.05s;}
+.ottoPopup.warning{--pop-life:1.25s;}
+.ottoPopup .popTitle{height:22px;padding:3px 4px;background:#000080;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:space-between;}
+.ottoPopup.warning .popTitle{background:#7f5f00;}
+.ottoPopup .popTitle span:last-child{font-size:12px;line-height:14px;width:15px;text-align:center;background:#c0c0c0;color:#111;border:1px solid #fff;border-right-color:#555;border-bottom-color:#555;}
+.ottoPopup .popBody{display:flex;gap:10px;align-items:flex-start;padding:11px 10px 8px;min-height:54px;}
+.ottoPopup .popIcon{font-size:29px;line-height:29px;flex:0 0 auto;text-shadow:1px 1px 0 #fff;}
+.ottoPopup.warning .popIcon{filter:none;}
+.ottoPopup .popText{line-height:1.25;word-break:break-word;}
+.ottoPopup .popButtons{display:flex;justify-content:center;gap:6px;padding:0 0 9px;}
+.ottoPopup .popBtn{min-width:52px;padding:2px 8px;background:#c0c0c0;border:2px solid #fff;border-right-color:#555;border-bottom-color:#555;font:700 11px "MS Sans Serif",Tahoma,Arial,sans-serif;}
+.ottoPopup .popBtn:active{border:2px solid #555;border-right-color:#fff;border-bottom-color:#fff;}
+@keyframes ottoPopupLife{0%{opacity:0;transform:scale(.55) rotate(-2deg) translate(0,0)}8%{opacity:1;transform:scale(1.04) rotate(.5deg)}12%,82%{opacity:1}83%{opacity:.2;transform:scale(.98) translate(-8px,4px)}88%{opacity:1;transform:scale(1.02) translate(9px,-3px)}100%{opacity:0;transform:scale(.4) rotate(3deg) translate(22px,-12px)}}
+@keyframes ottoPopupJitter{0%,100%{margin-left:0;clip-path:inset(0 0 0 0)}23%{margin-left:-5px;clip-path:inset(2% 0 6% 0)}24%{margin-left:7px;clip-path:inset(0 4% 0 2%)}51%{margin-left:3px;clip-path:inset(12% 0 0 5%)}52%{margin-left:-7px;clip-path:inset(0 0 9% 0)}77%{margin-left:6px;clip-path:inset(3% 6% 4% 0)}78%{margin-left:-2px;clip-path:inset(0 0 0 7%)}}
+.ottoErrorMusic{position:fixed;width:1px;height:1px;left:-10px;top:-10px;opacity:0;pointer-events:none;}
+
 @keyframes ottoStageFlicker{
   0%,100%{filter:none}
   8%{filter:brightness(1.65) contrast(1.5)}
@@ -1068,22 +1088,60 @@ function openOttoBrooks(){
     ${photoHTML}
     <div class="ottoEcho e1"></div><div class="ottoEcho e2"></div><div class="ottoDissolve"></div><div class="ottoNoise"></div><div class="ottoFlash"></div>
     <div class="ottoWarningBits">ARCHIVE SIGNAL // ERROR 0x1978</div>
+    <div class="ottoPopupLayer"></div>
     <div class="ottoProgress"><div class="ottoProgressBar"></div><div class="ottoProgressText">SYSTEM SHUTDOWN IN PROGRESS...</div></div>
   </div></div></div>
-  <div class="ottoError"><div class="ottoVoid"></div><div class="ottoCheckerFloor"></div><div class="ottoErrorMessage">Error, Please Exit this page immediatly.<br><button class="ottoExit" type="button">EXIT</button></div></div>`;
+  <div class="ottoError"><div class="ottoVoid"></div><div class="ottoCheckerFloor"></div><div class="ottoErrorMessage">Error, Please Exit this page immediatly.<br><button class="ottoExit" type="button">EXIT</button></div></div>
+  <div id="ottoErrorMusic" class="ottoErrorMusic"></div>`;
   document.body.appendChild(overlay);
-  const stage=overlay.querySelector('.ottoStage'),error=overlay.querySelector('.ottoError'),exit=overlay.querySelector('.ottoExit');
+  const stage=overlay.querySelector('.ottoStage'),error=overlay.querySelector('.ottoError'),exit=overlay.querySelector('.ottoExit'),popupLayer=overlay.querySelector('.ottoPopupLayer');
   /* The corruption starts by abruptly killing My Documents audio. No music continues underneath it. */
   clearInterval(ottoAudioTimer);
   ottoAudioTimer=null;
   stopDocumentsMusicSlow();
+
+  const popupMessages=[
+    ['error','ARCHIVE ERROR','The requested memory block is corrupted.','ERROR'],
+    ['warning','SYSTEM WARNING','Visual archive integrity is failing.','WARNING'],
+    ['error','OTTO.EXE','This application has stopped responding.','OK'],
+    ['warning','SECURITY WARNING','Unknown signal detected in archive feed.','CLOSE'],
+    ['error','CRITICAL ERROR','Character index could not be read.','OK'],
+    ['warning','WINDOWS 1978','The archive is behaving unexpectedly.','IGNORE'],
+    ['error','MEMORY ERROR','0x0000DEAD // DATA LOST','OK'],
+    ['warning','WARNING','DO NOT CLOSE THIS WINDOW.','CONTINUE'],
+    ['error','SYSTEM ERROR','A fatal archive exception has occurred.','OK'],
+    ['warning','SIGNAL WARNING','Return path is unstable.','CLOSE']
+  ];
+  const popupPositions=[[7,12],[62,10],[31,22],[70,35],[4,55],[48,51],[24,68],[68,68],[40,7],[12,37]];
+  popupMessages.forEach((item,i)=>{
+    const [kind,title,msg,button]=item,pos=popupPositions[i%popupPositions.length];
+    setTimeout(()=>{
+      if(!overlay.isConnected || stage.style.display==='none')return;
+      const p=document.createElement('div');
+      p.className='ottoPopup '+kind;
+      p.style.left=pos[0]+'%';p.style.top=pos[1]+'%';
+      p.style.setProperty('--pop-life',(0.85+(i%4)*.15).toFixed(2)+'s');
+      p.style.zIndex=130+i;
+      p.innerHTML=`<div class="popTitle"><span>${title}</span><span>×</span></div><div class="popBody"><div class="popIcon">${kind==='warning'?'⚠️':'❌'}</div><div class="popText">${msg}</div></div><div class="popButtons"><button class="popBtn" type="button">${button}</button></div>`;
+      popupLayer.appendChild(p);
+      setTimeout(()=>p.remove(),1450);
+    },160+i*410);
+  });
+
   setTimeout(()=>{
     clearInterval(ottoAudioTimer);ottoAudioTimer=null;
     stopDocumentsMusicSlow();
     stage.style.display='none';error.classList.add('active');
+    /* Error-screen music: embedded YouTube clip begins at the user's requested 0:02 timestamp. */
+    try{
+      const host=overlay.querySelector('#ottoErrorMusic');
+      new YT.Player(host,{width:'1',height:'1',videoId:'ez7SMWXuqS0',playerVars:{autoplay:1,controls:0,start:2,playsinline:1,rel:0},events:{onReady:e=>{e.target.setVolume(100);e.target.seekTo(2,true);e.target.playVideo();}}});
+    }catch(e){}
   },5450);
   exit.onclick=()=>{
     clearInterval(ottoAudioTimer);ottoAudioTimer=null;stopDocumentsMusicSlow();
+    const errorPlayer=overlay.querySelector('#ottoErrorMusic');
+    if(errorPlayer)errorPlayer.innerHTML='';
     try{if(document.fullscreenElement)document.exitFullscreen();}catch(e){}
     try{window.close();}catch(e){}
     setTimeout(()=>{try{window.location.replace(returnUrl);}catch(e){window.location.href=returnUrl;}},80);
