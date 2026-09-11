@@ -1132,11 +1132,14 @@ function openOttoBrooks(){
     clearInterval(ottoAudioTimer);ottoAudioTimer=null;
     stopDocumentsMusicSlow();
     stage.style.display='none';error.classList.add('active');
-    /* Error-screen music: embedded YouTube clip begins at the user's requested 0:02 timestamp. */
-    try{
-      const host=overlay.querySelector('#ottoErrorMusic');
-      new YT.Player(host,{width:'1',height:'1',videoId:'ez7SMWXuqS0',playerVars:{autoplay:1,controls:0,start:2,playsinline:1,rel:0},events:{onReady:e=>{e.target.setVolume(100);e.target.seekTo(2,true);e.target.playVideo();}}});
-    }catch(e){}
+    /* Let the error screen sit silently for 5 seconds, then start the clip at 0:02. */
+    setTimeout(()=>{
+      if(!overlay.isConnected || !error.classList.contains('active'))return;
+      try{
+        const host=overlay.querySelector('#ottoErrorMusic');
+        new YT.Player(host,{width:'1',height:'1',videoId:'ez7SMWXuqS0',playerVars:{autoplay:1,controls:0,start:2,playsinline:1,rel:0},events:{onReady:e=>{e.target.setVolume(100);e.target.seekTo(2,true);e.target.playVideo();}}});
+      }catch(e){}
+    },5000);
   },5450);
   exit.onclick=()=>{
     clearInterval(ottoAudioTimer);ottoAudioTimer=null;stopDocumentsMusicSlow();
